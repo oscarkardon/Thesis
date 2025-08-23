@@ -9,6 +9,8 @@ from fairlearn.metrics import (
     demographic_parity_ratio,
     demographic_parity_difference
 )
+import numpy as np
+
 
 
 def random_forest_model(X_train, X_test, y_train, y_test, X_orig, X_test_index):

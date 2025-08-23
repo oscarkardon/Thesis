@@ -9,6 +9,7 @@ from fairlearn.metrics import (
     demographic_parity_ratio,
     demographic_parity_difference
 )
+import numpy as np
 
 def xgboost_model(X_train, X_test, y_train, y_test, X_orig, X_test_index):
     xgb = XGBClassifier(max_depth=4, random_state=42, learning_rate=0.03)
