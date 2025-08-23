@@ -1,5 +1,15 @@
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
+from fairlearn.metrics import (
+    MetricFrame,
+    true_positive_rate,
+    false_positive_rate,
+    selection_rate,
+    equalized_odds_difference,
+    demographic_parity_ratio,
+    demographic_parity_difference
+)
+
 
 def random_forest_model(X_train, X_test, y_train, y_test, X_orig, X_test_index):
     rf = RandomForestClassifier(max_depth=4, min_samples_leaf=20, random_state=42)
