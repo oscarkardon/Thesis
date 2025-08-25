@@ -86,3 +86,17 @@ def run_multiple_log_reg(X, y, X_orig, n_runs=5, test_size=0.2):
     }
 
     return averaged
+
+
+def run_multiple_log_reg_fal(X_train, X_test, y_train, y_test, X_orig_test, protected_attr='sex', n_runs=5):
+    results = []
+
+    for _ in range(n_runs):
+        result = logistic_regression(
+            X_train, X_test, y_train, y_test,
+            X_orig=X_orig_test, X_test_index=X_test.index
+        )
+        results.append(result)
+
+    avg_results = {key: np.mean([r[key] for r in results]) for key in results[0].keys()}
+    return avg_results

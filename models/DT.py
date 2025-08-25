@@ -63,3 +63,17 @@ def run_multiple_dt(X_encoded, y, sensitive_attr='sex', n_runs=5, test_size=0.2,
 
     avg_results = {key: np.mean([r[key] for r in results]) for key in results[0].keys()}
     return avg_results
+
+
+def run_multiple_dt_fal(X_train, X_test, y_train, y_test, X_orig_test, protected_attr='sex', n_runs=5):
+    results = []
+
+    for _ in range(n_runs):
+        result = decision_tree(
+            X_train, X_test, y_train, y_test,
+            X_orig=X_orig_test, X_test_index=X_test.index
+        )
+        results.append(result)
+
+    avg_results = {key: np.mean([r[key] for r in results]) for key in results[0].keys()}
+    return avg_results
