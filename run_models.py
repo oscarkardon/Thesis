@@ -45,20 +45,26 @@ def run_all_models(models, X_encoded, y, X_orig, sensitive_attr='sex', n_runs=5,
 
 
 
-def run_all_models_with_custom_train(models, X_encoded, y, X_orig, protected_attr='sex', n_runs=5, test_size=0.2, random_state=42):
+def run_all_models_with_custom_train(
+    models,
+    X_train,
+    y_train,
+    X_test,
+    y_test,
+    X_orig,
+    n_runs=5
+):
     """
-    Run multiple models n_runs times using pre-defined training data (which could already include synthetic samples),
-    while keeping test data original. Does NOT generate synthetic data itself.
+    Run multiple models n_runs times on the same pre-split train/test sets.
+    Useful when training data has been augmented (e.g., FairSMOTE) and
+    test data should remain original.
 
     Args:
-        models: dict of {'name': model_function}
-        X_encoded: features (numeric, preprocessed)
-        y: labels
-        X_orig: original unscaled DataFrame (for sensitive features in metrics)
-        protected_attr: column name of sensitive attribute
-        n_runs: number of runs
-        test_size: fraction of data for test
-        random_state: for reproducibility
+        models: dict of { 'name': model_function }
+        X_train, y_train: training set (can include synthetic data)
+        X_test, y_test: test set (original)
+        X_orig: original unscaled dataset (for sensitive attributes in metrics)
+        n_runs: number of times to run each model
 
     Returns:
         dict of averaged results for each model
@@ -66,14 +72,15 @@ def run_all_models_with_custom_train(models, X_encoded, y, X_orig, protected_att
     all_results = {name: [] for name in models.keys()}
 
     for run in range(n_runs):
-        # Split train/test for this run
-        X_train, X_test, y_train, y_test = train_test_split(
-            X_encoded, y, test_size=test_size, stratify=y, random_state=random_state + run
-        )
-
-        # Evaluate each model with given train/test split
         for name, model_fn in models.items():
-            result = model_fn(X_train, X_test, y_train, y_test, X_orig=X_orig, X_test_index=X_test.index)
+            result = model_fn(
+                X_train,
+                X_test,
+                y_train,
+                y_test,
+                X_orig,
+                X_test.index  # original test set indices
+            )
             all_results[name].append(result)
 
     # Average results across runs
