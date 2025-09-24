@@ -23,16 +23,11 @@ def logistic_regression(X_train, X_test, y_train, y_test, X_orig, X_test_index):
     log_reg.fit(X_train_scaled, y_train)
 
     y_pred_log = log_reg.predict(X_test_scaled)
-
     acc = accuracy_score(y_test, y_pred_log)
-    
-    # Calculate classification report
     report = classification_report(y_test, y_pred_log, output_dict=True)
 
-    # sensitive feature (sex) from original unscaled data
     sensitive_features = X_orig.loc[X_test_index, 'sex']
 
-    # Fairlearn MetricFrame
     frame = MetricFrame(
         metrics={
             'accuracy': accuracy_score,
@@ -44,10 +39,15 @@ def logistic_regression(X_train, X_test, y_train, y_test, X_orig, X_test_index):
         y_pred=y_pred_log,
         sensitive_features=sensitive_features
     )
+    
+    tpr_female = frame.by_group['tpr'].loc['Female']
+    tpr_male = frame.by_group['tpr'].loc['Male']
 
     return {
         'accuracy': acc,
-        'tpr': frame.difference(method='between_groups')['tpr'],
+        'tpr_difference': frame.difference(method='between_groups')['tpr'],
+        'tpr_female': tpr_female,
+        'tpr_male': tpr_male,
         'equalized_odds': equalized_odds_difference(
             y_true=y_test,
             y_pred=y_pred_log,
@@ -63,8 +63,8 @@ def logistic_regression(X_train, X_test, y_train, y_test, X_orig, X_test_index):
             y_pred=y_pred_log,
             sensitive_features=sensitive_features
         ),
-        # Add the classification report
-        'classification_report': report
+        'classification_report': report,
+        'y_pred': y_pred_log
     }
 
 import numpy as np

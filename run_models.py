@@ -20,47 +20,24 @@ def run_all_models_with_custom_train(
 ):
     """
     Run multiple models n_runs times on the same pre-split train/test sets.
-    Useful when training data has been augmented (e.g., FairSMOTE) and
-    test data should remain original.
-
-    Args:
-        models: dict of { 'name': model_function }
-        X_train, y_train: training set (can include synthetic data)
-        X_test, y_test: test set (original)
-        X_orig: original unscaled dataset (for sensitive attributes in metrics)
-        n_runs: number of times to run each model
-
-    Returns:
-        dict of averaged results for each model
     """
     all_results = {name: [] for name in models.keys()}
+    all_preds = {name: [] for name in models.keys()}
 
     for run in range(n_runs):
         for name, model_fn in models.items():
-            result = model_fn(
+            result = evaluate_model(
+                model_fn,
                 X_train,
                 X_test,
                 y_train,
                 y_test,
                 X_orig,
-                X_test.index  # original test set indices
+                X_test.index
             )
             all_results[name].append(result)
-
-    # Extract and print classification reports separately
-    for name, results in all_results.items():
-        print(f"--- Classification Reports for {name} ---")
-        # Ensure 'classification_report' key exists before accessing
-        if 'classification_report' in results[0]:
-            for i, result in enumerate(results):
-                report_dict = result['classification_report']
-                # Pretty print the dictionary as a report
-                report_str = classification_report(
-                    y_test, 
-                    pd.Series(report_dict['macro avg']['support'] * np.arange(len(y_test))),
-                    output_dict=False
-                )
-                print(f"Run {i+1}:\n{report_str}")
+            # Store the predictions for averaging later
+            all_preds[name].append(result.pop('y_pred'))
 
     # Average numeric results across runs
     avg_results = {
@@ -71,5 +48,18 @@ def run_all_models_with_custom_train(
         }
         for name, results in all_results.items()
     }
+    
+    # Calculate and print a single, averaged classification report for each model
+    for name, preds_list in all_preds.items():
+        # Stack all predictions into a single array
+        stacked_preds = np.vstack(preds_list)
+        
+        # Determine the most common prediction for each sample across all runs
+        averaged_preds = np.apply_along_axis(lambda x: np.argmax(np.bincount(x)), axis=0, arr=stacked_preds)
+        
+        print(f"--- Averaged Classification Report for {name} ---")
+        report_str = classification_report(y_test, averaged_preds)
+        print(report_str)
+        print("\n")
 
     return avg_results

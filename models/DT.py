@@ -9,13 +9,14 @@ def decision_tree(X_train, X_test, y_train, y_test, X_orig, X_test_index):
     dt.fit(X_train, y_train)
 
     y_pred_dt = dt.predict(X_test)
-    
-    # Calculate and store the classification report
-    report = classification_report(y_test, y_pred_dt, output_dict=True)
 
     acc = accuracy_score(y_test, y_pred_dt)
+    
+    # Calculate classification report and predictions
+    report = classification_report(y_test, y_pred_dt, output_dict=True)
+    y_pred = y_pred_dt
 
-    # sensitive feature (sex) from original unscaled data
+    # Sensitive feature (sex) from original unscaled data
     sensitive_features = X_orig.loc[X_test_index, 'sex']
 
     # Fairlearn MetricFrame
@@ -30,10 +31,16 @@ def decision_tree(X_train, X_test, y_train, y_test, X_orig, X_test_index):
         y_pred=y_pred_dt,
         sensitive_features=sensitive_features
     )
+    
+    # Extract TPR for each group
+    tpr_female = frame.by_group['tpr'].loc['Female']
+    tpr_male = frame.by_group['tpr'].loc['Male']
 
     return {
         'accuracy': acc,
-        'tpr': frame.difference(method='between_groups')['tpr'],
+        'tpr_difference': frame.difference(method='between_groups')['tpr'],
+        'tpr_female': tpr_female, # New entry
+        'tpr_male': tpr_male, # New entry
         'equalized_odds': equalized_odds_difference(
             y_true=y_test,
             y_pred=y_pred_dt,
@@ -49,8 +56,8 @@ def decision_tree(X_train, X_test, y_train, y_test, X_orig, X_test_index):
             y_pred=y_pred_dt,
             sensitive_features=sensitive_features
         ),
-        # Add the classification report to the returned dictionary
-        'classification_report': report
+        'classification_report': report,
+        'y_pred': y_pred
     }
 
 

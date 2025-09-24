@@ -19,16 +19,11 @@ def random_forest_model(X_train, X_test, y_train, y_test, X_orig, X_test_index):
     rf.fit(X_train, y_train)
 
     y_pred_rf = rf.predict(X_test)
-
     acc = accuracy_score(y_test, y_pred_rf)
-    
-    # Calculate classification report
     report = classification_report(y_test, y_pred_rf, output_dict=True)
 
-    # sensitive feature (sex) from original unscaled data
     sensitive_features = X_orig.loc[X_test_index, 'sex']
 
-    # Fairlearn MetricFrame
     frame = MetricFrame(
         metrics={
             'accuracy': accuracy_score,
@@ -40,10 +35,15 @@ def random_forest_model(X_train, X_test, y_train, y_test, X_orig, X_test_index):
         y_pred=y_pred_rf,
         sensitive_features=sensitive_features
     )
+    
+    tpr_female = frame.by_group['tpr'].loc['Female']
+    tpr_male = frame.by_group['tpr'].loc['Male']
 
     return {
         'accuracy': acc,
-        'tpr': frame.difference(method='between_groups')['tpr'],
+        'tpr_difference': frame.difference(method='between_groups')['tpr'],
+        'tpr_female': tpr_female,
+        'tpr_male': tpr_male,
         'equalized_odds': equalized_odds_difference(
             y_true=y_test,
             y_pred=y_pred_rf,
@@ -59,9 +59,10 @@ def random_forest_model(X_train, X_test, y_train, y_test, X_orig, X_test_index):
             y_pred=y_pred_rf,
             sensitive_features=sensitive_features
         ),
-        # Add the classification report
-        'classification_report': report
+        'classification_report': report,
+        'y_pred': y_pred_rf
     }
+
 
 def run_multiple_rf(X, y, sensitive_attr='sex', n_runs=5, test_size=0.2, X_orig=None):
     from sklearn.model_selection import train_test_split

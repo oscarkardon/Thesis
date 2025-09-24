@@ -40,6 +40,9 @@ import pandas as pd
 import pandas as pd
 from IPython.display import display
 
+import pandas as pd
+from IPython.display import display
+
 def save_results_to_csv(all_results_pre, all_results_post, model_names, filename="model_results.csv"):
     """
     Save model results to CSV, adding average rows for Pre-LLM, Post-LLM, and a difference row.
@@ -54,11 +57,25 @@ def save_results_to_csv(all_results_pre, all_results_post, model_names, filename
 
     # Add model rows
     for model, pre, post in zip(model_names, all_results_pre, all_results_post):
-        # Remove classification report from dictionary to save to csv
+        # Remove classification report and y_pred from dictionary to save to csv
         pre.pop('classification_report', None)
+        pre.pop('y_pred', None)
         post.pop('classification_report', None)
-        rows.append({"Model": model, "Iteration": "Pre-LLM", **pre})
-        rows.append({"Model": model, "Iteration": "Post-LLM", **post})
+        post.pop('y_pred', None)
+        
+        # Add a row for the pre-LLM model
+        rows.append({
+            "Model": model,
+            "Iteration": "Pre-LLM",
+            **pre
+        })
+
+        # Add a row for the post-LLM model
+        rows.append({
+            "Model": model,
+            "Iteration": "Post-LLM",
+            **post
+        })
 
     df = pd.DataFrame(rows)
 
