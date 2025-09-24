@@ -2,13 +2,16 @@ from fairlearn.metrics import MetricFrame, true_positive_rate, false_positive_ra
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
-
+from sklearn.metrics import classification_report
 
 def decision_tree(X_train, X_test, y_train, y_test, X_orig, X_test_index):
     dt = DecisionTreeClassifier(random_state=42, max_depth=8)
     dt.fit(X_train, y_train)
 
     y_pred_dt = dt.predict(X_test)
+    
+    # Calculate and store the classification report
+    report = classification_report(y_test, y_pred_dt, output_dict=True)
 
     acc = accuracy_score(y_test, y_pred_dt)
 
@@ -28,7 +31,6 @@ def decision_tree(X_train, X_test, y_train, y_test, X_orig, X_test_index):
         sensitive_features=sensitive_features
     )
 
-
     return {
         'accuracy': acc,
         'tpr': frame.difference(method='between_groups')['tpr'],
@@ -46,7 +48,9 @@ def decision_tree(X_train, X_test, y_train, y_test, X_orig, X_test_index):
             y_true=y_test,
             y_pred=y_pred_dt,
             sensitive_features=sensitive_features
-        )
+        ),
+        # Add the classification report to the returned dictionary
+        'classification_report': report
     }
 
 

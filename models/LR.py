@@ -12,6 +12,7 @@ from fairlearn.metrics import (
     demographic_parity_ratio,
     selection_rate
 )
+from sklearn.metrics import classification_report
 
 def logistic_regression(X_train, X_test, y_train, y_test, X_orig, X_test_index):
     scaler = StandardScaler()
@@ -24,6 +25,9 @@ def logistic_regression(X_train, X_test, y_train, y_test, X_orig, X_test_index):
     y_pred_log = log_reg.predict(X_test_scaled)
 
     acc = accuracy_score(y_test, y_pred_log)
+    
+    # Calculate classification report
+    report = classification_report(y_test, y_pred_log, output_dict=True)
 
     # sensitive feature (sex) from original unscaled data
     sensitive_features = X_orig.loc[X_test_index, 'sex']
@@ -40,7 +44,6 @@ def logistic_regression(X_train, X_test, y_train, y_test, X_orig, X_test_index):
         y_pred=y_pred_log,
         sensitive_features=sensitive_features
     )
-
 
     return {
         'accuracy': acc,
@@ -59,8 +62,10 @@ def logistic_regression(X_train, X_test, y_train, y_test, X_orig, X_test_index):
             y_true=y_test,
             y_pred=y_pred_log,
             sensitive_features=sensitive_features
-        )
-}
+        ),
+        # Add the classification report
+        'classification_report': report
+    }
 
 import numpy as np
 from sklearn.model_selection import train_test_split

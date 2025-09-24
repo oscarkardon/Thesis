@@ -10,6 +10,7 @@ from fairlearn.metrics import (
     demographic_parity_difference
 )
 import numpy as np
+from sklearn.metrics import classification_report
 
 def xgboost_model(X_train, X_test, y_train, y_test, X_orig, X_test_index):
     xgb = XGBClassifier(max_depth=4, random_state=42, learning_rate=0.03)
@@ -18,6 +19,10 @@ def xgboost_model(X_train, X_test, y_train, y_test, X_orig, X_test_index):
     y_pred_xgb = xgb.predict(X_test)
 
     acc = accuracy_score(y_test, y_pred_xgb)
+
+    # Calculate classification report
+    report = classification_report(y_test, y_pred_xgb, output_dict=True)
+
     # sensitive feature (sex) from original unscaled data
     sensitive_features = X_orig.loc[X_test_index, 'sex']
 
@@ -33,7 +38,6 @@ def xgboost_model(X_train, X_test, y_train, y_test, X_orig, X_test_index):
         y_pred=y_pred_xgb,
         sensitive_features=sensitive_features
     )
-
 
     return {
         'accuracy': acc,
@@ -52,9 +56,10 @@ def xgboost_model(X_train, X_test, y_train, y_test, X_orig, X_test_index):
             y_true=y_test,
             y_pred=y_pred_xgb,
             sensitive_features=sensitive_features
-        )
+        ),
+        # Add the classification report
+        'classification_report': report
     }
-
 
 def run_multiple_xgb(X, y, sensitive_attr='sex', n_runs=5, test_size=0.2, X_orig=None):
     from sklearn.model_selection import train_test_split
