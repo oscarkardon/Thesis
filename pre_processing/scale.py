@@ -7,7 +7,7 @@ def preprocess_data(X, y):
 
     # Encode categorical variables
     X_clean['sex'] = np.where(X['sex'] == 'Male', 1, 0)
-    X_clean['race'] = np.where(X['race'] != ' White', 0, 1)
+    X_clean['race'] = np.where(X['race'].str.strip() == 'White', 1, 0)
 
     # Clean target labels
     y_clean = y.iloc[:, 0].replace({'<=50K.': '<=50K', '>50K.': '>50K'})
