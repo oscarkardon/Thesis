@@ -109,8 +109,7 @@ def quadrant_analysis_binary_income(X_real, X_synth, numeric_cols,
     - Q3: High income women
     - Q4: Low income women
 
-    Then compute correlation distance (raw and normalized),
-    heatmaps, KDEs, and summary stats.
+    Then compute correlation distance, heatmaps, KDEs, and summary stats.
     """
 
     # --- Combine X and label into one dataframe ---
@@ -161,28 +160,19 @@ def quadrant_analysis_binary_income(X_real, X_synth, numeric_cols,
 
         print(f"\n===== {q} =====")
 
-        # Correlation distance (raw and normalized)
+        # Correlation distance
         corr_real = real_q.corr().fillna(0)
         corr_synth = synth_q.corr().fillna(0)
 
-        # Align columns in case of mismatch
+        # Align columns in case of slight mismatch
         corr_real, corr_synth = corr_real.align(corr_synth, join='inner', axis=0)
         corr_real, corr_synth = corr_real.align(corr_synth, join='inner', axis=1)
 
-        # Frobenius norm (raw pCD)
-        pcd_raw = np.sqrt(np.nansum((corr_real.values - corr_synth.values)**2))
+        # Frobenius norm of difference
+        pcd = np.sqrt(np.nansum((corr_real.values - corr_synth.values)**2))
+        print(f"Correlation distance (pCD) = {pcd:.4f}")
 
-        # Normalized pCD
-        n = corr_real.shape[0]
-        if n > 1:
-            pcd_norm = pcd_raw / (2 * np.sqrt(n**2 - n))
-            print(f"Correlation distance (pCD) = {pcd_raw:.4f}")
-            print(f"Normalized pCD = {pcd_norm:.4f}")
-        else:
-            print(f"Correlation distance (pCD) = {pcd_raw:.4f}")
-            print("⚠️ Not enough features to normalize pCD")
-
-        # --- Heatmaps ---
+        # Heatmaps
         fig, axes = plt.subplots(1, 2, figsize=(12,4))
         sns.heatmap(corr_real, cmap='viridis', center=0, ax=axes[0])
         axes[0].set_title(f"Real {q}")
@@ -190,6 +180,17 @@ def quadrant_analysis_binary_income(X_real, X_synth, numeric_cols,
         axes[1].set_title(f"Synthetic {q}")
         plt.show()
 
-        # --- KDE plots (limit to first few for clarity) ---
+        # KDE plots (limit to first few for clarity)
         for col in numeric_cols[:5]:
-            plt.figu
+            plt.figure(figsize=(6,4))
+            sns.kdeplot(real_q[col], label='Real', fill=True, alpha=0.4)
+            sns.kdeplot(synth_q[col], label='Synthetic', fill=True, alpha=0.4)
+            plt.title(f"{col} Distribution in {q}")
+            plt.legend()
+            plt.show()
+
+        # Summary stats
+        print(f"Summary stats for {q} (Real):")
+        display(real_q.describe())
+        print(f"Summary stats for {q} (Synthetic):")
+        display(synth_q.describe())
