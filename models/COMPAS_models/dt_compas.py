@@ -32,8 +32,9 @@ def decision_tree_compas(X_train, X_test, y_train, y_test, X_orig, X_test_index)
         sensitive_features=sensitive_features
     )
 
-    tpr_female = frame.by_group['tpr'].get('Female', np.nan)
-    tpr_male   = frame.by_group['tpr'].get('Male', np.nan)
+    tpr_female = frame.by_group['tpr'].loc[0]
+    tpr_male = frame.by_group['tpr'].loc[1]
+
 
     return {
         'accuracy': acc,
