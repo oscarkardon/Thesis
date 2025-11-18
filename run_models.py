@@ -15,6 +15,7 @@ def run_all_models_with_custom_train(
     X_test,
     y_test,
     X_orig,
+    X_test_index,
     *,
     n_runs=5
 ):
@@ -33,13 +34,12 @@ def run_all_models_with_custom_train(
                 y_train,
                 y_test,
                 X_orig,
-                X_test.index
+                X_test_index  # <- explicitly pass the index
             )
             all_results[name].append(result)
-            # Store the predictions for averaging later
-            all_preds[name].append(result.pop('y_pred'))
+            all_preds[name].append(result.pop('y_pred'))  # store predictions for averaging
 
-    # Average numeric results across runs
+    # Average numeric metrics across runs
     avg_results = {
         name: {
             metric: np.mean([r[metric] for r in results])
@@ -48,15 +48,16 @@ def run_all_models_with_custom_train(
         }
         for name, results in all_results.items()
     }
-    
-    # Calculate and print a single, averaged classification report for each model
+
+    # Print averaged classification report
     for name, preds_list in all_preds.items():
-        # Stack all predictions into a single array
         stacked_preds = np.vstack(preds_list)
-        
-        # Determine the most common prediction for each sample across all runs
-        averaged_preds = np.apply_along_axis(lambda x: np.argmax(np.bincount(x)), axis=0, arr=stacked_preds)
-        
+        averaged_preds = np.apply_along_axis(
+            lambda x: np.argmax(np.bincount(x.astype(int))),
+            axis=0,
+            arr=stacked_preds
+        )
+
         print(f"--- Averaged Classification Report for {name} ---")
         report_str = classification_report(y_test, averaged_preds)
         print(report_str)
