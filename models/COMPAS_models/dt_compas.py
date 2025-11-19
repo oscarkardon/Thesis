@@ -17,50 +17,49 @@ def decision_tree_compas(X_train, X_test, y_train, y_test, X_orig, X_test_index)
     acc = accuracy_score(y_test, y_pred_dt)
     report = classification_report(y_test, y_pred_dt, output_dict=True)
 
-    # ---- FIXED: sensitive attribute is RACE only ----
-    # Protected group = race == 0
-    sensitive_features = (X_orig.loc[X_test_index, 'race'] == 0).astype(int)
+   # Protected group = race==0
+    sensitive_features = (X_orig.loc[X_test_index, "race"] == 0).astype(int)
 
     frame = MetricFrame(
         metrics={
-            'accuracy': accuracy_score,
-            'tpr': true_positive_rate,
-            'fpr': false_positive_rate,
-            'selection_rate': selection_rate,
+            "accuracy": accuracy_score,
+            "tpr": true_positive_rate,
+            "fpr": false_positive_rate,
+            "selection_rate": selection_rate
         },
         y_true=y_test,
-        y_pred=y_pred_dt,
+        y_pred=y_pred,
         sensitive_features=sensitive_features
     )
 
-    # Group 0: non-protected
-    # Group 1: protected (race == 0)
-    tpr_non_protected = frame.by_group['tpr'].loc[0]
-    tpr_protected = frame.by_group['tpr'].loc[1]
+    # Use .get() to avoid KeyError if a group is missing
+    tpr_non_protected = frame.by_group['tpr'].get(0, np.nan)
+    tpr_protected = frame.by_group['tpr'].get(1, np.nan)
+
 
     return {
-        'accuracy': acc,
-        'tpr_difference': frame.difference(method='between_groups')['tpr'],
-        'tpr_non_protected': tpr_non_protected,
-        'tpr_protected': tpr_protected,
-        'equalized_odds': equalized_odds_difference(
-            y_true=y_test,
-            y_pred=y_pred_dt,
-            sensitive_features=sensitive_features
-        ),
-        'disparate_impact': demographic_parity_ratio(
-            y_true=y_test,
-            y_pred=y_pred_dt,
-            sensitive_features=sensitive_features
-        ),
-        'demographic_parity': demographic_parity_difference(
-            y_true=y_test,
-            y_pred=y_pred_dt,
-            sensitive_features=sensitive_features
-        ),
-        'classification_report': report,
-        'y_pred': y_pred_dt
-    }
+    "accuracy": acc,
+    "tpr_difference": frame.difference(method="between_groups")["tpr"],
+    "tpr_non_protected": tpr_non_protected,
+    "tpr_protected": tpr_protected,
+    "equalized_odds": equalized_odds_difference(
+        y_true=y_test,
+        y_pred=y_pred,
+        sensitive_features=sensitive_features
+    ),
+    "disparate_impact": demographic_parity_ratio(
+        y_true=y_test,
+        y_pred=y_pred,
+        sensitive_features=sensitive_features
+    ),
+    "demographic_parity": demographic_parity_difference(
+        y_true=y_test,
+        y_pred=y_pred,
+        sensitive_features=sensitive_features
+    ),
+    "classification_report": report,
+    "y_pred": y_pred
+}
 
 
 
