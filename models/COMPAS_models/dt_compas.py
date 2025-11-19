@@ -8,7 +8,7 @@ from sklearn.metrics import accuracy_score, classification_report
 
 def decision_tree_compas(X_train, X_test, y_train, y_test, X_orig, X_test_index):
     """Decision tree fairness evaluation for COMPAS."""
-    
+
     dt = DecisionTreeClassifier(random_state=42, max_depth=8)
     dt.fit(X_train, y_train)
 
@@ -17,8 +17,9 @@ def decision_tree_compas(X_train, X_test, y_train, y_test, X_orig, X_test_index)
     acc = accuracy_score(y_test, y_pred_dt)
     report = classification_report(y_test, y_pred_dt, output_dict=True)
 
-    # sensitive feature from unscaled COMPAS data
-    sensitive_features = X_orig.loc[X_test_index, 'sex']
+    # ---- FIXED: sensitive attribute is RACE only ----
+    # Protected group = race == 0
+    sensitive_features = (X_orig.loc[X_test_index, 'race'] == 0).astype(int)
 
     frame = MetricFrame(
         metrics={
@@ -32,15 +33,16 @@ def decision_tree_compas(X_train, X_test, y_train, y_test, X_orig, X_test_index)
         sensitive_features=sensitive_features
     )
 
-    tpr_female = frame.by_group['tpr'].loc[0]
-    tpr_male = frame.by_group['tpr'].loc[1]
-
+    # Group 0: non-protected
+    # Group 1: protected (race == 0)
+    tpr_non_protected = frame.by_group['tpr'].loc[0]
+    tpr_protected = frame.by_group['tpr'].loc[1]
 
     return {
         'accuracy': acc,
         'tpr_difference': frame.difference(method='between_groups')['tpr'],
-        'tpr_female': tpr_female,
-        'tpr_male': tpr_male,
+        'tpr_non_protected': tpr_non_protected,
+        'tpr_protected': tpr_protected,
         'equalized_odds': equalized_odds_difference(
             y_true=y_test,
             y_pred=y_pred_dt,
@@ -59,6 +61,7 @@ def decision_tree_compas(X_train, X_test, y_train, y_test, X_orig, X_test_index)
         'classification_report': report,
         'y_pred': y_pred_dt
     }
+
 
 
 def run_multiple_dt_compas(X, y, n_runs=5, test_size=0.2, X_orig=None):
