@@ -8,12 +8,7 @@ from fairlearn.metrics import (
 import numpy as np
 
 def random_forest_compas(X_train, X_test, y_train, y_test, X_orig, X_test_index):
-
-    rf = RandomForestClassifier(
-        max_depth=4,
-        min_samples_leaf=20,
-        random_state=42
-    )
+    rf = RandomForestClassifier(max_depth=4, min_samples_leaf=20, random_state=42)
     rf.fit(X_train, y_train)
 
     y_pred = rf.predict(X_test)
@@ -21,7 +16,6 @@ def random_forest_compas(X_train, X_test, y_train, y_test, X_orig, X_test_index)
     acc = accuracy_score(y_test, y_pred)
     report = classification_report(y_test, y_pred, output_dict=True)
 
-    # ---- FIX: race only ----
     sensitive_features = (X_orig.loc[X_test_index, "race"] == 0).astype(int)
 
     frame = MetricFrame(
@@ -39,8 +33,8 @@ def random_forest_compas(X_train, X_test, y_train, y_test, X_orig, X_test_index)
     return {
         "accuracy": acc,
         "tpr_difference": frame.difference(method="between_groups")["tpr"],
-        "tpr_non_protected": frame.by_group["tpr"].loc[0],
-        "tpr_protected": frame.by_group["tpr"].loc[1],
+        "tpr_non_protected": frame.by_group['tpr'].get(0, np.nan),
+        "tpr_protected": frame.by_group['tpr'].get(1, np.nan),
         "equalized_odds": equalized_odds_difference(
             y_true=y_test,
             y_pred=y_pred,
@@ -59,6 +53,7 @@ def random_forest_compas(X_train, X_test, y_train, y_test, X_orig, X_test_index)
         "classification_report": report,
         "y_pred": y_pred
     }
+
 
 
 def run_multiple_rf_compas(X, y, X_orig, n_runs=5, test_size=0.2):
