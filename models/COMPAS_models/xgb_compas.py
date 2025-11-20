@@ -7,61 +7,40 @@ from fairlearn.metrics import (
 )
 import numpy as np
 
-def xgboost_compas(X_train, X_test, y_train, y_test, X_orig, X_test_index):
+def xgboost_compas(X_train, X_test, y_train, y_test, X_test_orig, protected_attr, protected_group_value):
     xgb = XGBClassifier(
-        max_depth=4,
-        learning_rate=0.03,
-        n_estimators=200,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        objective="binary:logistic",
-        eval_metric="logloss",
+        max_depth=4, learning_rate=0.03, n_estimators=200,
+        subsample=0.8, colsample_bytree=0.8,
+        objective="binary:logistic", eval_metric="logloss",
         random_state=42
     )
     xgb.fit(X_train, y_train)
 
     y_pred = xgb.predict(X_test)
-
     acc = accuracy_score(y_test, y_pred)
     report = classification_report(y_test, y_pred, output_dict=True)
 
-    sensitive_features = (X_orig.loc[X_test_index, "race"] == 0).astype(int)
+    sensitive_binary = (X_test_orig[protected_attr].reset_index(drop=True) == protected_group_value).astype(int)
 
     frame = MetricFrame(
-        metrics={
-            "accuracy": accuracy_score,
-            "tpr": true_positive_rate,
-            "fpr": false_positive_rate,
-            "selection_rate": selection_rate
-        },
-        y_true=y_test,
+        metrics={"accuracy": accuracy_score, "tpr": true_positive_rate, "fpr": false_positive_rate, "selection_rate": selection_rate},
+        y_true=y_test.reset_index(drop=True),
         y_pred=y_pred,
-        sensitive_features=sensitive_features
+        sensitive_features=sensitive_binary
     )
 
     return {
         "accuracy": acc,
-        "tpr_difference": frame.difference(method="between_groups")["tpr"],
-        "tpr_non_protected": frame.by_group['tpr'].get(0, np.nan),
-        "tpr_protected": frame.by_group['tpr'].get(1, np.nan),
-        "equalized_odds": equalized_odds_difference(
-            y_true=y_test,
-            y_pred=y_pred,
-            sensitive_features=sensitive_features
-        ),
-        "disparate_impact": demographic_parity_ratio(
-            y_true=y_test,
-            y_pred=y_pred,
-            sensitive_features=sensitive_features
-        ),
-        "demographic_parity": demographic_parity_difference(
-            y_true=y_test,
-            y_pred=y_pred,
-            sensitive_features=sensitive_features
-        ),
+        "tpr_difference": frame.difference(method="between_groups").get("tpr", np.nan),
+        "tpr_protected": frame.by_group.get('tpr', {}).get(1, np.nan),
+        "tpr_non_protected": frame.by_group.get('tpr', {}).get(0, np.nan),
+        "equalized_odds": equalized_odds_difference(y_test, y_pred, sensitive_features=sensitive_binary),
+        "disparate_impact": demographic_parity_ratio(y_test, y_pred, sensitive_features=sensitive_binary),
+        "demographic_parity": demographic_parity_difference(y_test, y_pred, sensitive_features=sensitive_binary),
         "classification_report": report,
         "y_pred": y_pred
     }
+
 
 
 
