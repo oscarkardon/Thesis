@@ -1,55 +1,66 @@
-# --------------------------
-# Generic Model Runner
-# --------------------------
-def evaluate_model(model_fn, X_train, X_test, y_train, y_test, X_test_orig, protected_attr, protected_group_value):
-    """Helper to evaluate a single model function with protected attribute."""
-    return model_fn(X_train, X_test, y_train, y_test, X_test_orig, protected_attr, protected_group_value)
+import numpy as np
+import pandas as pd
+from sklearn.metrics import classification_report
+from fairlearn.metrics import MetricFrame
+
+def evaluate_model(model_fn, X_train, X_test, y_train, y_test, X_orig, X_test_index):
+    """Helper to evaluate a single model function"""
+    return model_fn(X_train, X_test, y_train, y_test, X_orig, X_test_index)
 
 
 def run_all_models_with_custom_train(
     models,
-    X_train, y_train, X_test, y_test, X_test_orig,
-    protected_attr, protected_group_value,
+    X_train,
+    y_train,
+    X_test,
+    y_test,
+    X_orig,
+    X_test_index,
+    *,
     n_runs=5
 ):
-    all_results = {}
-    all_preds = {}
+    """
+    Run multiple models n_runs times on the same pre-split train/test sets.
+    """
+    all_results = {name: [] for name in models.keys()}
+    all_preds = {name: [] for name in models.keys()}
 
-    for name, model_fn in models.items():
-        results_list = []
-        preds_list = []
-        for _ in range(n_runs):
-            res = evaluate_model(
+    for run in range(n_runs):
+        for name, model_fn in models.items():
+            result = evaluate_model(
                 model_fn,
-                X_train, X_test, y_train, y_test,
-                X_test_orig,
-                protected_attr,
-                protected_group_value
+                X_train,
+                X_test,
+                y_train,
+                y_test,
+                X_orig,
+                X_test_index  # <- explicitly pass the index
             )
-            results_list.append({k: v for k, v in res.items() if k != 'y_pred'})
-            preds_list.append(res['y_pred'])
-        all_results[name] = results_list
-        all_preds[name] = preds_list
+            all_results[name].append(result)
+            all_preds[name].append(result.pop('y_pred'))  # store predictions for averaging
 
-    # Average numeric metrics
-    avg_results = {}
-    for name in all_results:
-        avg_results[name] = {}
-        for key in all_results[name][0]:
-            if isinstance(all_results[name][0][key], (int, float, np.integer, np.floating)):
-                avg_results[name][key] = np.mean([r[key] for r in all_results[name]])
-            else:
-                avg_results[name][key] = deepcopy(all_results[name][0][key])
+    # Average numeric metrics across runs
+    avg_results = {
+        name: {
+            metric: np.mean([r[metric] for r in results])
+            for metric in results[0].keys()
+            if metric != 'classification_report'
+        }
+        for name, results in all_results.items()
+    }
 
-        # Compute averaged classification report
-        stacked_preds = np.vstack(all_preds[name])
+    # Print averaged classification report
+    for name, preds_list in all_preds.items():
+        stacked_preds = np.vstack(preds_list)
         averaged_preds = np.apply_along_axis(
             lambda x: np.argmax(np.bincount(x.astype(int))),
             axis=0,
             arr=stacked_preds
         )
+
         print(f"--- Averaged Classification Report for {name} ---")
-        print(classification_report(y_test, averaged_preds))
+        report_str = classification_report(y_test, averaged_preds)
+        print(report_str)
         print("\n")
 
     return avg_results
