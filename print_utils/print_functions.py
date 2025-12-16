@@ -1,35 +1,46 @@
-import numpy as np
 import pandas as pd
 from IPython.display import display
 
-def save_results_to_csv(all_results_pre, all_results_post, model_names, pcd_unnorm, pcd_norm, filename="model_results.csv"):
+def print_averaged_results(results, model_name):
+    print(f"\n📊 Averaged Results for {model_name}")
+    print("=" * 40)
+    for k, v in results.items():
+        val = f"{v:.4f}" if isinstance(v, float) or isinstance(v, np.floating) else str(v)
+        print(f"{k.replace('_', ' ').title():<25}: {val}")
+
+
+def save_results_to_csv(all_results_pre, all_results_post, model_names, filename="model_results.csv"):
     """
-    Save model results to CSV, including PCD scores for the Post-LLM phase.
+    Save model results to CSV, adding average rows for Pre-LLM, Post-LLM, and a difference row.
+
+    Parameters:
+        all_results_pre (list of dict): list of pre-LLM results per model
+        all_results_post (list of dict): list of post-LLM results per model
+        model_names (list of str): model names corresponding to results
+        filename (str): CSV file name
     """
     rows = []
 
-    # Process individual models
+    # Add model rows
     for model, pre, post in zip(model_names, all_results_pre, all_results_post):
-        # Clean dictionaries (avoiding side effects on original dicts)
-        pre_clean = {k: v for k, v in pre.items() if k not in ['classification_report', 'y_pred']}
-        post_clean = {k: v for k, v in post.items() if k not in ['classification_report', 'y_pred']}
+        # Remove classification report and y_pred from dictionary to save to csv
+        pre.pop('classification_report', None)
+        pre.pop('y_pred', None)
+        post.pop('classification_report', None)
+        post.pop('y_pred', None)
         
-        # Add Pre-LLM row (PCD is NaN because it's the baseline)
+        # Add a row for the pre-LLM model
         rows.append({
             "Model": model,
             "Iteration": "Pre-LLM",
-            "pcd_unnormalized": np.nan,
-            "pcd_normalized": np.nan,
-            **pre_clean
+            **pre
         })
 
-        # Add Post-LLM row (Include PCD scores here)
+        # Add a row for the post-LLM model
         rows.append({
             "Model": model,
             "Iteration": "Post-LLM",
-            "pcd_unnormalized": pcd_unnorm,
-            "pcd_normalized": pcd_norm,
-            **post_clean
+            **post
         })
 
     df = pd.DataFrame(rows)
@@ -50,11 +61,6 @@ def save_results_to_csv(all_results_pre, all_results_post, model_names, pcd_unno
         pd.DataFrame([{"Model": "Difference", "Iteration": "Post-LLM - Pre-LLM", **diff}])
     ], ignore_index=True)
 
-    # Reorder columns to put PCD near the front for visibility
-    cols = ['Model', 'Iteration', 'pcd_normalized', 'accuracy', 'tpr_difference'] # Adjust as needed
-    remaining_cols = [c for c in df.columns if c not in cols]
-    df = df[cols + remaining_cols]
-
     df.to_csv(filename, index=False)
-    print(f"Results (including PCD scores) saved to {filename}")
+    print(f"Results (including averages and difference) saved to {filename}")
     display(df)
