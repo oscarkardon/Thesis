@@ -1,80 +1,35 @@
-def print_averaged_results(results, model_name):
-    print(f"\n📊 Averaged Results for {model_name}")
-    print("=" * 40)
-    for k, v in results.items():
-        val = f"{v:.4f}" if isinstance(v, float) or isinstance(v, np.floating) else str(v)
-        print(f"{k.replace('_', ' ').title():<25}: {val}")
-
-
-def print_for_google_sheets(all_results_pre, all_results_post, model_names):
-    """
-    Prints model results row by row with tabs for easy Google Sheets copy-paste.
-
-    Parameters:
-        all_results_pre (list of dict): List of pre-LLM result dicts for each model.
-        all_results_post (list of dict): List of post-LLM result dicts for each model.
-        model_names (list of str): List of model names, same order as results lists.
-    """
-    if not all_results_pre or not all_results_post:
-        print("⚠️ No results to print.")
-        return
-
-    # Automatically get metric names from the first result
-    metric_names = list(all_results_pre[0].keys())
-
-    # Print header
-    headers = ["Model", "Iteration"] + metric_names
-    print("\t".join(headers))
-
-    # Print rows
-    for model, pre, post in zip(model_names, all_results_pre, all_results_post):
-        for label, result in zip(["Pre-LLM", "Post-LLM"], [pre, post]):
-            row = [model, label] + [
-                f"{v:.4f}" if isinstance(v, float) else str(v) for v in result.values()
-            ]
-            print("\t".join(row))
-
-
-import pandas as pd
-
+import numpy as np
 import pandas as pd
 from IPython.display import display
 
-import pandas as pd
-from IPython.display import display
-
-def save_results_to_csv(all_results_pre, all_results_post, model_names, filename="model_results.csv"):
+def save_results_to_csv(all_results_pre, all_results_post, model_names, pcd_unnorm, pcd_norm, filename="model_results.csv"):
     """
-    Save model results to CSV, adding average rows for Pre-LLM, Post-LLM, and a difference row.
-
-    Parameters:
-        all_results_pre (list of dict): list of pre-LLM results per model
-        all_results_post (list of dict): list of post-LLM results per model
-        model_names (list of str): model names corresponding to results
-        filename (str): CSV file name
+    Save model results to CSV, including PCD scores for the Post-LLM phase.
     """
     rows = []
 
-    # Add model rows
+    # Process individual models
     for model, pre, post in zip(model_names, all_results_pre, all_results_post):
-        # Remove classification report and y_pred from dictionary to save to csv
-        pre.pop('classification_report', None)
-        pre.pop('y_pred', None)
-        post.pop('classification_report', None)
-        post.pop('y_pred', None)
+        # Clean dictionaries (avoiding side effects on original dicts)
+        pre_clean = {k: v for k, v in pre.items() if k not in ['classification_report', 'y_pred']}
+        post_clean = {k: v for k, v in post.items() if k not in ['classification_report', 'y_pred']}
         
-        # Add a row for the pre-LLM model
+        # Add Pre-LLM row (PCD is NaN because it's the baseline)
         rows.append({
             "Model": model,
             "Iteration": "Pre-LLM",
-            **pre
+            "pcd_unnormalized": np.nan,
+            "pcd_normalized": np.nan,
+            **pre_clean
         })
 
-        # Add a row for the post-LLM model
+        # Add Post-LLM row (Include PCD scores here)
         rows.append({
             "Model": model,
             "Iteration": "Post-LLM",
-            **post
+            "pcd_unnormalized": pcd_unnorm,
+            "pcd_normalized": pcd_norm,
+            **post_clean
         })
 
     df = pd.DataFrame(rows)
@@ -95,6 +50,11 @@ def save_results_to_csv(all_results_pre, all_results_post, model_names, filename
         pd.DataFrame([{"Model": "Difference", "Iteration": "Post-LLM - Pre-LLM", **diff}])
     ], ignore_index=True)
 
+    # Reorder columns to put PCD near the front for visibility
+    cols = ['Model', 'Iteration', 'pcd_normalized', 'accuracy', 'tpr_difference'] # Adjust as needed
+    remaining_cols = [c for c in df.columns if c not in cols]
+    df = df[cols + remaining_cols]
+
     df.to_csv(filename, index=False)
-    print(f"Results (including averages and difference) saved to {filename}")
+    print(f"Results (including PCD scores) saved to {filename}")
     display(df)
