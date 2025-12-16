@@ -73,7 +73,7 @@ def train_xgb(X_train, X_test, y_train, y_test, X_test_orig, attr, val):
 def evaluate_model(model_fn, X_train, X_test, y_train, y_test, X_test_orig, protected_attr, protected_group_value):
     return model_fn(X_train, X_test, y_train, y_test, X_test_orig, protected_attr, protected_group_value)
 
-def run_all_models_income(
+def run_all_models(
     models_dict, X_train, y_train, X_test, y_test, X_test_orig, 
     protected_attr, protected_group_value, n_runs=5
 ):
