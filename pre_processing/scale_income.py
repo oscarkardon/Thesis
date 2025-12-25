@@ -70,3 +70,26 @@ def preprocess_data(X, y, scaler=None):
     X_clean = pd.DataFrame(X_clean, columns=X_clean.columns, index=X.index)
 
     return X_clean, pd.Series(y_clean, name='income'), scaler
+
+def normalize_columns(X, y):
+    """Normalize sex, race, and income columns for consistency."""
+    X = X.copy()
+    y = y.copy()
+
+    if "sex" in X.columns and X["sex"].dtype == "object":
+        X["sex"] = X["sex"].str.strip().str.capitalize()
+        X["sex"] = X["sex"].map({"Male": 1, "Female": 0})
+    elif "sex" in X.columns:
+        X["sex"] = X["sex"].astype(int)
+
+    if "race" in X.columns and X["race"].dtype == "object":
+        X["race"] = X["race"].str.strip().str.lower()
+        X["race"] = (X["race"] == "white").astype(int)
+    elif "race" in X.columns:
+        X["race"] = X["race"].astype(int)
+
+    # Normalize target labels
+    y = y.replace({'<=50K.': '<=50K', '>50K.': '>50K'})
+    y = (y != '<=50K').astype(int)
+
+    return X, y
