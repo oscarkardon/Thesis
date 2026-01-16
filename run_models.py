@@ -16,7 +16,10 @@ from fairlearn.metrics import (
 # --------------------------
 def _compute_metrics(y_true, y_pred, X_test_orig, protected_attr, protected_group_value):
     """Internal helper to calculate fairness metrics."""
-    sensitive_binary = (X_test_orig[protected_attr].reset_index(drop=True) == protected_group_value).astype(int)
+    sensitive_binary = (
+        X_test_orig.loc[y_true.index, protected_attr]  
+        == protected_group_value
+    ).astype(int)
     
     frame = MetricFrame(
         metrics={
