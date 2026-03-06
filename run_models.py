@@ -67,8 +67,12 @@ def train_rf(X_train, X_test, y_train, y_test, X_test_orig, attr, val, random_st
 
 def train_xgb(X_train, X_test, y_train, y_test, X_test_orig, attr, val, random_state=None):
     model = XGBClassifier(
-        max_depth=4, learning_rate=0.03, n_estimators=200, 
-        random_state=random_state, eval_metric="logloss"
+        max_depth=4,
+        learning_rate=0.03,
+        n_estimators=200,
+        random_state=random_state,
+        eval_metric="logloss",
+        enable_categorical=True  # <-- enable categorical support
     )
     model.fit(X_train, y_train)
     return _compute_metrics(y_test, model.predict(X_test), X_test_orig, attr, val)
