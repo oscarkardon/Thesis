@@ -45,36 +45,39 @@ def _compute_metrics(y_true, y_pred, X_test_orig, protected_attr, protected_grou
     }
 
 # --------------------------
-# Model Wrappers (The model_fn objects)
+# Model Wrappers (accept random_state)
 # --------------------------
-def train_dt(X_train, X_test, y_train, y_test, X_test_orig, attr, val):
-    model = DecisionTreeClassifier(random_state=42, max_depth=8)
+def train_dt(X_train, X_test, y_train, y_test, X_test_orig, attr, val, random_state=None):
+    model = DecisionTreeClassifier(random_state=random_state, max_depth=8)
     model.fit(X_train, y_train)
     return _compute_metrics(y_test, model.predict(X_test), X_test_orig, attr, val)
 
-def train_lr(X_train, X_test, y_train, y_test, X_test_orig, attr, val):
+def train_lr(X_train, X_test, y_train, y_test, X_test_orig, attr, val, random_state=None):
     scaler = StandardScaler()
     X_train_s = scaler.fit_transform(X_train)
     X_test_s = scaler.transform(X_test)
-    model = LogisticRegression(max_iter=1000)
+    model = LogisticRegression(max_iter=1000, random_state=random_state)
     model.fit(X_train_s, y_train)
     return _compute_metrics(y_test, model.predict(X_test_s), X_test_orig, attr, val)
 
-def train_rf(X_train, X_test, y_train, y_test, X_test_orig, attr, val):
-    model = RandomForestClassifier(max_depth=4, min_samples_leaf=20, random_state=42)
+def train_rf(X_train, X_test, y_train, y_test, X_test_orig, attr, val, random_state=None):
+    model = RandomForestClassifier(max_depth=4, min_samples_leaf=20, random_state=random_state)
     model.fit(X_train, y_train)
     return _compute_metrics(y_test, model.predict(X_test), X_test_orig, attr, val)
 
-def train_xgb(X_train, X_test, y_train, y_test, X_test_orig, attr, val):
-    model = XGBClassifier(max_depth=4, learning_rate=0.03, n_estimators=200, random_state=42, eval_metric="logloss")
+def train_xgb(X_train, X_test, y_train, y_test, X_test_orig, attr, val, random_state=None):
+    model = XGBClassifier(
+        max_depth=4, learning_rate=0.03, n_estimators=200, 
+        random_state=random_state, eval_metric="logloss"
+    )
     model.fit(X_train, y_train)
     return _compute_metrics(y_test, model.predict(X_test), X_test_orig, attr, val)
 
 # --------------------------
 # Generic Model Runner
 # --------------------------
-def evaluate_model(model_fn, X_train, X_test, y_train, y_test, X_test_orig, protected_attr, protected_group_value):
-    return model_fn(X_train, X_test, y_train, y_test, X_test_orig, protected_attr, protected_group_value)
+def evaluate_model(model_fn, X_train, X_test, y_train, y_test, X_test_orig, protected_attr, protected_group_value, random_state=None):
+    return model_fn(X_train, X_test, y_train, y_test, X_test_orig, protected_attr, protected_group_value, random_state=random_state)
 
 def run_all_models(
     models_dict, X_train, y_train, X_test, y_test, X_test_orig, 
@@ -87,7 +90,9 @@ def run_all_models(
         preds_list = []
         
         for _ in range(n_runs):
-            res = evaluate_model(model_fn, X_train, X_test, y_train, y_test, X_test_orig, protected_attr, protected_group_value)
+            # Generate a random seed for this run
+            seed = np.random.randint(0, 1_000_000)
+            res = evaluate_model(model_fn, X_train, X_test, y_train, y_test, X_test_orig, protected_attr, protected_group_value, random_state=seed)
             results_list.append({k: v for k, v in res.items() if k != 'y_pred'})
             preds_list.append(res['y_pred'])
 
